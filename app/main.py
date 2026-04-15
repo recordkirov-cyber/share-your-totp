@@ -221,11 +221,14 @@ def homepage() -> HTMLResponse:
         <footer style="text-align: center; color: #6b7280; font-size: 0.9rem;">
           <p><strong>Share Your TOTP</strong> — приватный способ делиться одноразовыми TOTP кодами</p>
           <p>
-            📖 <a href="https://github.com/recordkirov-cyber/share-your-totp" target="_blank" style="color: #2563eb; text-decoration: none;">Репозиторий на GitHub</a> •
+            📖 <a href="https://github.com/recordkirov-cyber/share-your-totp" target="_blank" style="color: #2563eb; text-decoration: none;">Репозиторий</a> •
+            📦 <a href="https://github.com/recordkirov-cyber/share-your-totp/pkgs/container/share-your-totp" target="_blank" style="color: #2563eb; text-decoration: none;">Container Registry</a> •
             🔒 Приватность и безопасность превыше всего
           </p>
           <p style="font-size: 0.85rem; margin-top: 12px; color: #9ca3af;">
             Никаких метаданных, никакой аутентификации, только в памяти
+            <br>
+            <a href="https://github.com/recordkirov-cyber/share-your-totp/blob/main/LICENSE" target="_blank" style="color: #9ca3af; text-decoration: none;">GPLv3</a>
           </p>
         </footer>
         """

@@ -17,7 +17,15 @@
 
 ## Запуск
 
-### Docker (рекомендуется)
+### Docker из GitHub Container Registry (самый просто)
+
+```bash
+docker run --rm -p 8000:8000 ghcr.io/recordkirov-cyber/share-your-totp:main
+```
+
+Откройте `http://localhost:8000`
+
+### Docker (локальная сборка)
 
 ```bash
 docker build -t share-your-totp .
@@ -141,8 +149,26 @@ share-your-totp/
 ├── requirements.txt       # зависимости Python
 ├── Dockerfile            # конфигурация Docker
 ├── .gitignore            # исключения для git
+├── .github/
+│   └── workflows/
+│       └── publish-to-ghcr.yml  # CI/CD для GHCR
 ├── README.md             # этот файл
+├── LICENSE               # GPLv3 лицензия
 ```
+
+## Container Registry
+
+Контейнер автоматически публикуется в [GitHub Container Registry](https://github.com/recordkirov-cyber/share-your-totp/pkgs/container/share-your-totp):
+
+```bash
+# Использовать последний образ из main ветки
+docker run -p 8000:8000 ghcr.io/recordkirov-cyber/share-your-totp:main
+
+# Или конкретный тег версии
+docker run -p 8000:8000 ghcr.io/recordkirov-cyber/share-your-totp:v1.0.0
+```
+
+Образ автоматически собирается и загружается при каждом push в main ветку и при создании git тегов.
 
 ## Требования
 
@@ -153,4 +179,4 @@ share-your-totp/
 
 ## Лицензия
 
-MIT
+[GNU General Public License v3](LICENSE) — свободное ПО
