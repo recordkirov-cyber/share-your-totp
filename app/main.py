@@ -112,8 +112,12 @@ def format_html(content: str) -> HTMLResponse:
           <style>
             body {{ font-family: Arial, sans-serif; margin: 0; padding: 24px; background: #f5f7fb; color: #202124; }}
             .page {{ max-width: 720px; margin: 0 auto; background: white; padding: 28px; border-radius: 14px; box-shadow: 0 18px 45px rgba(0,0,0,.08); }}
-            input, select, button {{ width: 100%; padding: 12px 14px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 10px; }}
-            button {{ background: #2563eb; color: white; border: none; cursor: pointer; }}
+            input[type="text"], input[type="number"], input[type="email"], select {{ width: 100%; padding: 12px 14px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; }}
+            input[type="checkbox"] {{ width: auto; margin: 0 8px 0 0; cursor: pointer; vertical-align: middle; }}
+            label {{ display: block; margin: 12px 0 6px 0; font-weight: 500; }}
+            label.checkbox-label {{ display: flex; align-items: center; margin: 12px 0; font-weight: normal; }}
+            label.checkbox-label input {{ margin: 0 8px 0 0; }}
+            button {{ width: 100%; padding: 12px 14px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 10px; background: #2563eb; color: white; border: none; cursor: pointer; }}
             button:hover {{ background: #1d4ed8; }}
             .small {{ font-size: 0.95rem; color: #4b5563; }}
             .alert {{ background: #eff6ff; padding: 12px 14px; border-left: 4px solid #2563eb; margin-bottom: 16px; border-radius: 8px; }}
@@ -192,8 +196,9 @@ def homepage() -> HTMLResponse:
           <label>Ссылка живёт, часов</label>
           <input name="hours" type="number" min="0.01" max="48" step="0.01" value="1" required />
 
-          <label>
-            <input type="checkbox" name="burn_after_read" value="true" /> Уничтожить после просмотра
+          <label class="checkbox-label">
+            <input type="checkbox" name="burn_after_read" value="true" />
+            Уничтожить после просмотра
           </label>
 
           <button type="submit">Создать приватную ссылку</button>
