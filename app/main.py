@@ -125,6 +125,8 @@ def format_html(content: str) -> HTMLResponse:
             .small {{ font-size: 0.95rem; color: #4b5563; }}
             .alert {{ background: #eff6ff; padding: 12px 14px; border-left: 4px solid #2563eb; margin-bottom: 16px; border-radius: 8px; word-break: break-word; overflow-wrap: break-word; }}
             code {{ background: #f3f4f6; padding: 2px 4px; border-radius: 4px; font-size: 0.9rem; }}
+            a {{ color: #2563eb; text-decoration: none; transition: color 0.2s; }}
+            a:hover {{ color: #1d4ed8; text-decoration: underline; }}
             @media (max-width: 600px) {{
               body {{ padding: 16px; }}
               .page {{ padding: 16px; }}
@@ -215,6 +217,17 @@ def homepage() -> HTMLResponse:
         <div class="alert">
           <strong>API:</strong> POST /api/create с JSON {"secret","algorithm","digits","hours","burn_after_read"} возвращает ссылку.
         </div>
+        <hr style="margin: 28px 0; border: none; border-top: 1px solid #e5e7eb;">
+        <footer style="text-align: center; color: #6b7280; font-size: 0.9rem;">
+          <p><strong>Share Your TOTP</strong> — приватный способ делиться одноразовыми TOTP кодами</p>
+          <p>
+            📖 <a href="https://github.com/recordkirov-cyber/share-your-totp" target="_blank" style="color: #2563eb; text-decoration: none;">Репозиторий на GitHub</a> •
+            🔒 Приватность и безопасность превыше всего
+          </p>
+          <p style="font-size: 0.85rem; margin-top: 12px; color: #9ca3af;">
+            Никаких метаданных, никакой аутентификации, только в памяти
+          </p>
+        </footer>
         """
     )
 
