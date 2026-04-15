@@ -177,7 +177,7 @@ def homepage() -> HTMLResponse:
         </p>
         <form method="post" action="/create">
           <label>Приватный ключ TOTP</label>
-          <input name="secret" required placeholder="Введите секретную фразу или Base32-секрет" />
+          <input type="text" name="secret" required placeholder="Base32 или текст" />
 
           <label>Алгоритм</label>
           <select name="algorithm">
