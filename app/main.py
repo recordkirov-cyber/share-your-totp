@@ -228,8 +228,25 @@ async def create_form(
         <h1>Ссылка создана</h1>
         <div class=\"alert\">Ссылка активна {payload.hours} ч.</div>
         <p>Используйте эту ссылку для просмотра TOTP:</p>
-        <p><code>{htmlescape(link)}</code></p>
-        <p><a href=\"{htmlescape(link)}\">Открыть ссылку</a></p>
+        <button id="copyBtn" style="width: 100%; padding: 12px 14px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 10px; background: #f0f0f0; color: #202124; cursor: pointer;" onclick="copyToClipboard('{htmlescape(link)}')">
+          📋 Скопировать ссылку
+        </button>
+        <p id="copyMsg" style="display: none; color: #10b981; font-weight: bold; margin-top: 8px;">✓ Скопировано в буфер!</p>
+        <p><a href=\"{htmlescape(link)}\">Или открыть ссылку напрямую →</a></p>
+        <script>
+          function copyToClipboard(text) {{
+            navigator.clipboard.writeText(text).then(() => {{
+              const btn = document.getElementById('copyBtn');
+              const msg = document.getElementById('copyMsg');
+              btn.style.display = 'none';
+              msg.style.display = 'block';
+              setTimeout(() => {{
+                btn.style.display = 'block';
+                msg.style.display = 'none';
+              }}, 2000);
+            }});
+          }}
+        </script>
         """
     )
 
@@ -259,20 +276,74 @@ async def create_secret_entry(payload: CreatePayload) -> str:
 
 @app.get("/secret/{token}", response_class=HTMLResponse)
 def view_secret(token: str) -> HTMLResponse:
-    entry = get_entry(token)
+    try:
+        entry = get_entry(token)
+    except HTTPException:
+        return format_html(
+            """
+            <h1>❌ Ссылка устарела</h1>
+            <p class="alert">Ссылка больше недоступна. Она могла истечь по времени или уже просмотрена с флагом "burn after read".</p>
+            <p><a href="/">← Вернуться на главную</a></p>
+            """
+        )
+    
     burn = "true" if entry["burn_after_read"] else "false"
     return format_html(
         f"""
         <h1>Просмотр TOTP</h1>
         <p class=\"small\">Нажмите кнопку ниже, чтобы увидеть ТОТР. Это защищает от предпросмотра ссылки.</p>
-        <form id=\"revealForm\" method=\"post\" action=\"/secret/{htmlescape(token)}/reveal\">
-          <button type=\"submit\">Просмотреть ТОТР</button>
-        </form>
+        <button id="revealBtn" type="button" onclick="revealTotp()">Просмотреть ТОТР</button>
+        <div id="totpContainer" style="display: none; margin-top: 24px;">
+          <div id="progressContainer" style="margin-bottom: 20px;">
+            <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
+              <div id="progressBar" style="height: 100%; background: #2563eb; width: 0%; transition: width 0.1s linear;"></div>
+            </div>
+            <p id="timeLeft" style="font-size: 0.9rem; color: #6b7280; margin-top: 8px; text-align: center;">Время до обновления: <strong id="secondsLeft">30</strong>с</p>
+          </div>
+          <p id="totpCode" style="font-size: 2.5rem; font-weight: bold; text-align: center; letter-spacing: 0.2em; background: #f3f4f6; padding: 20px; border-radius: 10px; font-family: monospace;">---</p>
+          <p class="small" style="text-align: center; margin-top: 16px;"><span id="algorithmInfo\"></span></p>
+        </div>
         <script>
+          const token = '{htmlescape(token)}';
           const burnAfterRead = {burn};
+          let updateInterval = null;
+          
+          function revealTotp() {{
+            document.getElementById('revealBtn').style.display = 'none';
+            document.getElementById('totpContainer').style.display = 'block';
+            updateTotpCode();
+            updateInterval = setInterval(updateTotpCode, 500);
+          }}
+          
+          function updateTotpCode() {{
+            fetch(`/secret/${{token}}/current`)
+              .then(r => {{
+                if (r.status === 410) {{
+                  clearInterval(updateInterval);
+                  document.getElementById('totpContainer').innerHTML = '<p style=\"color: #dc2626; font-weight: bold;\">⚠️ Ссылка устарела или уже просмотрена</p>';
+                  return null;
+                }}
+                return r.json();
+              }})
+              .then(data => {{
+                if (!data) return;
+                document.getElementById('totpCode').textContent = data.code;
+                document.getElementById('algorithmInfo').textContent = `Алгоритм: ${{data.algorithm}}, цифр: ${{data.digits}}`;
+                
+                const remaining = Math.ceil(data.seconds_left);
+                const progress = ((30 - remaining) / 30) * 100;
+                document.getElementById('progressBar').style.width = progress + '%';
+                document.getElementById('secondsLeft').textContent = remaining;
+              }})
+              .catch(() => {{
+                clearInterval(updateInterval);
+                document.getElementById('totpContainer').innerHTML = '<p style=\"color: #dc2626;\">❌ Ошибка загрузки TOTP</p>';
+              }});
+          }}
+          
           window.addEventListener('beforeunload', () => {{
             if (!burnAfterRead) return;
-            navigator.sendBeacon('/secret/{htmlescape(token)}/cleanup');
+            navigator.sendBeacon(`/secret/${{token}}/cleanup`);
           }});
         </script>
         """
@@ -298,6 +369,28 @@ def reveal_secret(token: str) -> HTMLResponse:
         { '<p class="alert">Ссылка уничтожена после просмотра.</p>' if burn else '' }
         """
     )
+
+
+@app.get("/secret/{token}/current")
+def get_current_totp(token: str) -> JSONResponse:
+    entry = get_entry(token)
+    try:
+        code = current_totp(entry)
+    except HTTPException as exc:
+        return JSONResponse(
+            {"error": "Ссылка устарела или уже просмотрена"},
+            status_code=410
+        )
+    
+    current_counter = int(time.time()) // DEFAULT_STEP_SECONDS
+    seconds_left = ((current_counter + 1) * DEFAULT_STEP_SECONDS) - time.time()
+    
+    return JSONResponse({
+        "code": code,
+        "algorithm": entry["algorithm"],
+        "digits": entry["digits"],
+        "seconds_left": seconds_left,
+    })
 
 
 @app.post("/secret/{token}/cleanup")
