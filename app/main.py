@@ -222,7 +222,7 @@ async def create_form(
         burn_after_read=bool(burn_after_read),
     )
     token = await create_secret_entry(payload)
-    link = request.url_for("view_secret", token=token)
+    link = str(request.url_for("view_secret", token=token))
     return format_html(
         f"""
         <h1>Ссылка создана</h1>
@@ -237,8 +237,8 @@ async def create_form(
 @app.post("/api/create")
 async def api_create(request: Request, payload: CreatePayload) -> JSONResponse:
     token = await create_secret_entry(payload)
-    link = request.url_for("view_secret", token=token)
-    return JSONResponse({"url": str(link)})
+    link = str(request.url_for("view_secret", token=token))
+    return JSONResponse({"url": link})
 
 
 async def create_secret_entry(payload: CreatePayload) -> str:
