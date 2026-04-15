@@ -117,11 +117,17 @@ def format_html(content: str) -> HTMLResponse:
             label {{ display: block; margin: 12px 0 6px 0; font-weight: 500; }}
             label.checkbox-label {{ display: flex; align-items: center; margin: 12px 0; font-weight: normal; }}
             label.checkbox-label input {{ margin: 0 8px 0 0; }}
-            button {{ width: 100%; padding: 12px 14px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 10px; background: #2563eb; color: white; border: none; cursor: pointer; }}
+            button {{ width: 100%; padding: 12px 14px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 10px; background: #2563eb; color: white; border: none; cursor: pointer; font-size: 1rem; }}
             button:hover {{ background: #1d4ed8; }}
             .small {{ font-size: 0.95rem; color: #4b5563; }}
-            .alert {{ background: #eff6ff; padding: 12px 14px; border-left: 4px solid #2563eb; margin-bottom: 16px; border-radius: 8px; }}
-            code {{ background: #f3f4f6; padding: 4px 6px; border-radius: 4px; }}
+            .alert {{ background: #eff6ff; padding: 12px 14px; border-left: 4px solid #2563eb; margin-bottom: 16px; border-radius: 8px; word-break: break-word; overflow-wrap: break-word; }}
+            code {{ background: #f3f4f6; padding: 2px 4px; border-radius: 4px; font-size: 0.9rem; }}
+            @media (max-width: 600px) {{
+              body {{ padding: 16px; }}
+              .page {{ padding: 16px; }}
+              .alert {{ padding: 10px 12px; font-size: 0.9rem; }}
+              button {{ font-size: 0.95rem; }}
+            }}
           </style>
         </head>
         <body>
