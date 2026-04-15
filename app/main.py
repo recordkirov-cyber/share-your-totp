@@ -10,7 +10,7 @@ from typing import Dict, List
 
 from fastapi import FastAPI, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 app = FastAPI(
     title="Share Your TOTP",
@@ -33,20 +33,23 @@ class CreatePayload(BaseModel):
     hours: float = Field(...)
     burn_after_read: bool = Field(False)
 
-    @validator("algorithm")
+    @field_validator("algorithm")
+    @classmethod
     def validate_algorithm(cls, value: str) -> str:
         normalized = value.strip().upper()
         if normalized not in ALLOWED_ALGORITHMS:
             raise ValueError("Алгоритм должен быть SHA1, SHA256 или SHA512")
         return normalized
 
-    @validator("digits")
+    @field_validator("digits")
+    @classmethod
     def validate_digits(cls, value: int) -> int:
         if value not in ALLOWED_DIGITS:
             raise ValueError("Количество цифр должно быть 6, 7 или 8")
         return value
 
-    @validator("hours")
+    @field_validator("hours")
+    @classmethod
     def validate_hours(cls, value: float) -> float:
         if value <= 0 or value > MAX_LIFETIME_HOURS:
             raise ValueError(f"Время жизни должно быть от 0 до {MAX_LIFETIME_HOURS} часов")
