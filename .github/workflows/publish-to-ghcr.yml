@@ -53,3 +53,17 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 37.230.192.180
+          username: user1
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            /usr/local/bin/update-share-your-totp.sh
