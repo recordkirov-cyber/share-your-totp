@@ -1,20 +1,20 @@
+import array
 import asyncio
 import base64
 import binascii
-import hashlib
 import hmac
 import time
 import threading
 import uuid
-from typing import Dict, List
+from typing import Dict, NamedTuple
 
-from fastapi import FastAPI, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 app = FastAPI(
     title="Share Your TOTP",
-    description="Приватное одноразовое деление TOTP-секретами через временные ссылки.",
+    description="Приватное защищенный шаринг TOTP-секретами через временные ссылки.",
 )
 
 STORE_LOCK = threading.Lock()
@@ -24,6 +24,14 @@ DEFAULT_STEP_SECONDS = 30
 ALLOWED_ALGORITHMS = {"SHA1": "sha1", "SHA256": "sha256", "SHA512": "sha512"}
 ALLOWED_DIGITS = {6, 7, 8}
 MAX_LIFETIME_HOURS = 72
+
+
+class TotpSlots(NamedTuple):
+    """Оптимизированная структура для хранения TOTP кодов"""
+    start_counter: int
+    codes: array.array  # array.array('I') с числовыми кодами
+    expires_at: float
+    digits: int
 
 
 class CreatePayload(BaseModel):
@@ -64,29 +72,29 @@ def normalize_secret(secret: str) -> bytes:
         return secret.encode("utf-8")
 
 
-def totp_code(secret: bytes, counter: int, digits: int, algorithm: str) -> str:
+def totp_code(secret: bytes, counter: int, digits: int, algorithm: str) -> int:
     counter_bytes = counter.to_bytes(8, byteorder="big")
     digest_name = ALLOWED_ALGORITHMS[algorithm]
     digest = hmac.new(secret, counter_bytes, digest_name).digest()
     offset = digest[-1] & 0x0F
     code_int = int.from_bytes(digest[offset : offset + 4], byteorder="big") & 0x7FFFFFFF
-    return str(code_int % (10**digits)).zfill(digits)
+    return code_int % (10**digits)
 
 
-def generate_totp_slots(secret: bytes, digits: int, algorithm: str, expires_at: float) -> List[Dict]:
+def generate_totp_slots(secret: bytes, digits: int, algorithm: str, expires_at: float) -> TotpSlots:
     now = time.time()
     start_counter = int(now) // DEFAULT_STEP_SECONDS
     end_counter = int(expires_at) // DEFAULT_STEP_SECONDS
-    slots = []
+    codes = array.array('I')  # unsigned int, 4 bytes per element
     for counter in range(start_counter, end_counter + 1):
-        slots.append(
-            {
-                "counter": counter,
-                "code": totp_code(secret, counter, digits, algorithm),
-                "expires_at": (counter + 1) * DEFAULT_STEP_SECONDS,
-            }
-        )
-    return slots
+        code_int = totp_code(secret, counter, digits, algorithm)
+        codes.append(code_int)
+    return TotpSlots(
+        start_counter=start_counter,
+        codes=codes,
+        expires_at=expires_at,
+        digits=digits
+    )
 
 
 def cleanup_expired_entries() -> None:
@@ -160,10 +168,24 @@ def delete_entry(token: str) -> None:
 
 def current_totp(entry: Dict) -> str:
     current_counter = int(time.time()) // DEFAULT_STEP_SECONDS
-    for slot in entry["slots"]:
-        if slot["counter"] == current_counter:
-            return slot["code"]
-    raise HTTPException(status_code=410, detail="Ссылка устарела или код уже недоступен")
+    slots = entry["slots"]
+    if not isinstance(slots, TotpSlots):
+        # Backward compatibility for old format
+        for slot in slots:
+            if slot["counter"] == current_counter:
+                return slot["code"]
+        raise HTTPException(status_code=410, detail="Ссылка устарела или код уже недоступен")
+    
+    # New optimized format
+    if current_counter < slots.start_counter:
+        raise HTTPException(status_code=410, detail="Ссылка ещё не активна")
+    
+    index = current_counter - slots.start_counter
+    if index >= len(slots.codes):
+        raise HTTPException(status_code=410, detail="Ссылка устарела или код уже недоступен")
+    
+    code_int = slots.codes[index]
+    return str(code_int).zfill(slots.digits)
 
 
 @app.on_event("startup")
